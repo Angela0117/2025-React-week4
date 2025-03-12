@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState } from "react";
 import axios from "axios";
-import { Modal } from 'bootstrap'; //產品modal-1：匯入modal
+import { Modal } from 'bootstrap'; 
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 const API_PATH = import.meta.env.VITE_API_PATH;
 
-//綁定產品 Modal 狀態-1：Modal 狀態的預設值
+//Modal 狀態的預設值
 const defaultModalState = {
   imageUrl: "",
   title: "",
@@ -37,13 +37,15 @@ function App() {
       [name]: value,
     });
   };
-
-  const getProducts = async () => {
+  //若沒有帶入參數，則頁碼預設為1，URL也帶入頁碼?page=${page}，page是六角API的參數
+  const getProducts = async (page = 1) => {
     try {
       const res = await axios.get(
-        `${BASE_URL}/v2/api/${API_PATH}/admin/products`
+        `${BASE_URL}/v2/api/${API_PATH}/admin/products?page=${page}`
       );
       setProducts(res.data.products);
+      //pagination是API回傳的物件，裡面有total、per_page、current_page、last_page、from、to等屬性，可以在F12的Components看到
+      setPageInfo(res.data.pagination);
       //console.log(res.data)
     } catch (error) {
       alert("取得產品失敗");
@@ -69,7 +71,7 @@ function App() {
       alert("登入失敗");
     }
   };
-   //在登入頁面渲染時觸發checkUserLogin這個API，檢查使用者是否已登入
+   //檢查使用者是否已登入
   const checkUserLogin = async () => {
     try {
       await axios.post(`${BASE_URL}/v2/api/user/check`);     
@@ -84,45 +86,41 @@ function App() {
   };
     //只需要執行一次登入驗證API，所以不需要傳入參數，為空陣列
   useEffect(() => {
-    //從 cookie 取得 token 範例：1.把token存在cookie
+    //把token存在cookie
     const token = document.cookie.replace(
       /(?:(?:^|.*;\s*)angelaToken\s*\=\s*([^;]*).*$)|^.*$/,
       "$1",
     );
-    //2.將token帶到axios上
+    //將token帶到axios上
     axios.defaults.headers.common['Authorization'] = token;
-    //3.就可執行checkUserLogin來戳API
+    //執行checkUserLogin來戳API
     checkUserLogin();
    
   },[])
 
-  //產品modal-2：透過 useRef 取得 DOM 元素，預設值為 null
+  //透過 useRef 取得 DOM 元素，預設值為 null
   const productModalRef = useRef(null);
 
   const delProductModalRef = useRef(null);
-  //判斷當前動作是哪個modal-1：預設為 null，新增為 create，編輯為 edit
+  //預設為 null，新增為 create，編輯為 edit
   const [modalMode, setModalMode] = useState(null);
   
   useEffect(() => {
-    //console.log(productModalRef.current);
-    //產品modal-4：建立 Modal 實例,可透過 new Modal(ref) 建立
+    
+    //建立 Modal 實例,可透過 new Modal(ref) 建立
     new Modal(productModalRef.current,{
       //在modal外的空白處點擊不會關閉modal
       backdrop: false
     });
-    //產品modal-5：撰寫 Modal 開關方法,可透過 Modal.getInstance(ref) 取得實例
-    //console.log(Modal.getInstance(productModalRef.current));
-
+    //撰寫 Modal 開關方法,可透過 Modal.getInstance(ref) 取得實例
     new Modal(delProductModalRef.current,{
       //在modal外的空白處點擊不會關閉modal
       backdrop: false
-    });
-    //產品
-
+    })
     
   },[]);
 
-  //產品modal-6：開啟modal的方法：透過Modal.getInstance(ref).show來開啟
+  //透過Modal.getInstance(ref).show來開啟modal
   const handleOpenProductModal = (Mode,product) => {
     //打開modal前就更新(渲染)modal資料，才能接著判斷是新增或編輯產品
     setModalMode(Mode);
@@ -141,7 +139,7 @@ function App() {
     const modalInstance = Modal.getInstance(productModalRef.current);
     modalInstance.show();
   }
- //產品modal-8：關閉modal的方法：透過Modal.getInstance(ref).hide來關閉
+ //透過Modal.getInstance(ref).hide來關閉
  const handleCloseproductModal = () => {
   const modalInstance = Modal.getInstance(productModalRef.current);
   modalInstance.hide();
@@ -160,10 +158,9 @@ const handleCloseDelProductModal = () => {
 }
 
 
-//綁定產品 Modal 狀態-2：新增 tempProduct 狀態
 const [tempProduct, setTempProduct] = useState(defaultModalState);
 
-//綁定產品 Modal 狀態-3：撰寫 handleModalInputChange 函式
+
 const handleModalInputChange = (e) => {
   //value：綁定 input 的值，checked：綁定 input 是否勾選的狀態，type：綁定 input 的類型是否為checkbox
   const { value, name, checked, type } = e.target;
@@ -175,7 +172,7 @@ const handleModalInputChange = (e) => {
   })
 }
 
-//綁定Modal多圖input狀態-1：多筆欄位，需要判斷是哪一筆陣列(副圖)在更新圖片,所以帶入index
+//多筆欄位，需要判斷是哪一筆陣列(副圖)在更新圖片,所以帶入index
 const handleImageChange=(e,index)=>{
   const { value } = e.target;
   //將tempProduct.imagesUrl的值複製一份
@@ -201,13 +198,12 @@ const handleAddImage=()=>{
 
   //取消圖片
   const handleRemoveImage=()=>{
-    //複製一個Images陣列，並在最後一個位置加入空字串
     const newImages = [...tempProduct.imagesUrl];
     
     //從陣列最後一個值移除
     newImages.pop();
 
-    setTempProduct({
+    ProductsetTemp({
       ...tempProduct,
       imagesUrl: newImages
     })
@@ -233,7 +229,6 @@ const createProduct = async()=>{
 //編輯產品
 const updateProduct = async()=>{
   try {
-    //因為tempProduct外層有data(六角原始API資料格式)，所以要帶入data，並將以下屬性轉為數字型別和判斷是否啟用(上面tempProduct預設為字串)
     const res = await axios.put(`${BASE_URL}/v2/api/${API_PATH}/admin/product/${tempProduct.id}`,
       {data:{
         ...tempProduct,
@@ -251,7 +246,6 @@ const updateProduct = async()=>{
 //刪除產品
 const deleteProduct = async()=>{
   try {
-    //因為tempProduct外層有data(六角原始API資料格式)，所以要帶入data，並將以下屬性轉為數字型別和判斷是否啟用(上面tempProduct預設為字串)
     const res = await axios.delete(`${BASE_URL}/v2/api/${API_PATH}/admin/product/${tempProduct.id}`);
     console.log(res)
   } catch (error) {
@@ -288,6 +282,40 @@ const handleDeleteProduct= async () => {
   }
 }
 
+//分頁資訊
+const [pageInfo, setPageInfo] = useState({});
+
+const handlePageChange=(page)=>{
+  getProducts(page);
+}
+
+//圖片上傳
+const handleFileChange = async (e) => {
+  //可映出input的files資料
+  //console.log(e.target.files);
+  const file = e.target.files[0];
+  
+  const formData = new FormData();
+  //file-to-upload是六角圖片API的值
+  formData.append("file-to-upload", file);
+  //console.log(formData);
+  //console.log([...formData.entries()]);
+
+  try {
+   const res = await axios.post(`${BASE_URL}/v2/api/${API_PATH}/admin/upload`, formData);
+   const uploadedImageUrl = res.data.imageUrl;
+   setTempProduct({
+    ...tempProduct,
+    //注意：這邊是imageUrl不是imagesUrl，否則會因為型態改變(上方imageUrl預設為字串不是陣列)導致imagesUrl的map出錯
+    imageUrl: uploadedImageUrl
+  })
+  console.log(res);
+  } 
+  catch (error) {
+
+  }
+
+}
 
   return (
     <>
@@ -332,8 +360,36 @@ const handleDeleteProduct= async () => {
                 </tbody>
               </table>
             </div>
-            
+            {/*分頁功能*/}
+            <div className="d-flex justify-content-center">
+              <nav>
+                <ul className="pagination">
+                  {/*當 pageInfo.has_pre 為 false → className="page-item disabled"（按鈕變灰，無法點擊）。*/}
+                  <li className={`page-item ${pageInfo.has_pre ? "" : "disabled"}`}>
+                    <a onClick={()=>handlePageChange(pageInfo.current_page-1)} className="page-link" href="#">
+                      上一頁
+                    </a>
+                  </li>
+
+                   {/*index+1：因為陣列從0開始，此處的li為目前頁面*/}
+                  {Array.from({ length: pageInfo.total_pages }).map((_, index) => (
+                     <li className={`page-item ${pageInfo.current_page === index+1 ? "active" : ""}`}>
+                     <a onClick={()=>handlePageChange(index+1)} className="page-link" href="#">
+                       {index+1}
+                     </a>
+                   </li>
+                  ))}
+                  
+                  <li className={`page-item ${pageInfo.has_next ? "" : "disabled"}`}>
+                    <a onClick={()=>handlePageChange(pageInfo.current_page+1)} className="page-link" href="#">
+                      下一頁
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
           </div>
+
         </div>
       ) : (
         <div className="d-flex flex-column justify-content-center align-items-center vh-100">
@@ -370,27 +426,39 @@ const handleDeleteProduct= async () => {
       )}
 
       {/*產品模板 Modal */}
-      {/*產品modal-3：在div帶入 ref={productModalRef */}
       <div ref={productModalRef} id="productModal" className="modal" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
         <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content border-0 shadow">
             <div className="modal-header border-bottom">
-              {/*判斷當前動作是哪個modal-3：判斷新增還是編輯modal */}
+              {/*判斷新增還是編輯modal */}
               <h5 className="modal-title fs-4">{modalMode === "create" ? "新增產品" : "編輯產品"}</h5>
-              {/*產品modal-9：將關閉modal加入編輯按鈕的點擊事件 */}
+              {/*將關閉modal加入編輯按鈕的點擊事件 */}
               <button onClick={handleCloseproductModal} type="button" className="btn-close" aria-label="Close"></button>
             </div>
 
             <div className="modal-body p-4">
               <div className="row g-4">
                 <div className="col-md-4">
+                
+                {/*圖片上傳模板*/}
+                <div className="mb-5">
+                  <label htmlFor="fileInput" className="form-label"> 圖片上傳 </label>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    className="form-control"
+                    id="fileInput"
+                    onChange={handleFileChange}
+                  />
+                </div>
+
                   <div className="mb-4">
                     <label htmlFor="primary-image" className="form-label">
                       主圖
                     </label>
                     <div className="input-group">
                       <input
-                      //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                      //在各個 input綁上value和監聽事件
                         value={tempProduct.imageUrl}
                         onChange={handleModalInputChange}
                         name="imageUrl"
@@ -418,7 +486,7 @@ const handleDeleteProduct= async () => {
                           副圖 {index + 1}
                         </label>
                         <input
-                          //綁定Modal多圖input狀態-2：帶入事件
+                          //帶入綁定Modal多圖事件
                           value={image}
                           onChange={(e) => handleImageChange(e,index)}
                           id={`imagesUrl-${index + 1}`}
@@ -456,7 +524,7 @@ const handleDeleteProduct= async () => {
                     </label>
                                    
                     <input
-                     //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                     //在各個 input綁上value和監聽事件
                       value={tempProduct.title}
                       onChange={handleModalInputChange}
                       name="title"
@@ -472,7 +540,7 @@ const handleDeleteProduct= async () => {
                       分類
                     </label>
                     <input
-                    //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                    //在各個 input綁上value和監聽事件
                       value={tempProduct.category}
                       onChange={handleModalInputChange}
                       name="category"
@@ -488,7 +556,7 @@ const handleDeleteProduct= async () => {
                       單位
                     </label>
                     <input
-                    //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件                   
+                    //在各個 input綁上value和監聽事件                   
                       value={tempProduct.unit}
                       onChange={handleModalInputChange}
                       name="unit"
@@ -505,7 +573,7 @@ const handleDeleteProduct= async () => {
                         原價
                       </label>
                       <input
-                       //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                       //在各個 input綁上value和監聽事件
                        value={tempProduct.origin_price}
                        onChange={handleModalInputChange}
                         name="origin_price"
@@ -520,7 +588,7 @@ const handleDeleteProduct= async () => {
                         售價
                       </label>
                       <input
-                       //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                       //在各個 input綁上value和監聽事件
                         value={tempProduct.price}
                         onChange={handleModalInputChange}
                         name="price"
@@ -537,7 +605,7 @@ const handleDeleteProduct= async () => {
                       產品描述
                     </label>
                     <textarea
-                    //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                    //在各個 input綁上value和監聽事件
                       value={tempProduct.description}
                       onChange={handleModalInputChange}
                       name="description"
@@ -553,7 +621,7 @@ const handleDeleteProduct= async () => {
                       說明內容
                     </label>
                     <textarea
-                    //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                    //在各個 input綁上value和監聽事件
                       value={tempProduct.content}
                       onChange={handleModalInputChange}
                       name="content"
@@ -566,7 +634,7 @@ const handleDeleteProduct= async () => {
 
                   <div className="form-check">
                     <input
-                     //綁定產品 Modal 狀態-4：在各個 input綁上value和監聽事件
+                     //在各個 input綁上value和監聽事件
                      //因為是checkbox，所以要用checked來判斷是否勾選
                      checked={tempProduct.is_enabled}
                       onChange={handleModalInputChange}
@@ -584,7 +652,7 @@ const handleDeleteProduct= async () => {
             </div>
 
             <div className="modal-footer border-top bg-light">
-              {/*產品modal-9：將關閉modal加入編輯按鈕的點擊事件 */}
+              {/*將關閉modal加入編輯按鈕的點擊事件 */}
               <button onClick={handleCloseproductModal} type="button" className="btn btn-secondary">
                 取消
               </button>
