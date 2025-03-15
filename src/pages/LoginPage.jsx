@@ -1,16 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 
 //登入頁面
 //因為其他頁面也會用到getProducts，使用 props方式帶入
-function LoginPage({ getProducts,setIsAuth}) {
+function LoginPage({setIsAuth}) {
 
   const [account, setAccount] = useState({
     username: "example@test.com",
     password: "example",
   });
+
+  // 檢查使用者是否已登入
+  const checkUserLogin = async () => {
+    const token = document.cookie.replace(
+      /(?:(?:^|.*;\s*)angelaToken\s*\=\s*([^;]*).*$)|^.*$/,
+      "$1"
+    );
+
+    if (!token) {
+      console.log("未偵測到 Token");
+      return;
+    }
+
+    // 設定 axios 預設的 token
+    axios.defaults.headers.common["Authorization"] = token;
+
+    try {
+      await axios.post(`${BASE_URL}/v2/api/user/check`);
+      setIsAuth(true); // 驗證成功，自動登入
+    } catch (error) {
+      console.error("驗證失敗，請重新登入", error);
+    }
+  };
+  // 組件載入時檢查登入狀態
+  useEffect(() => {
+    checkUserLogin();
+  }, []);
+
 
   const handleInputChange = (e) => {
     const { value, name } = e.target;
@@ -31,8 +59,6 @@ function LoginPage({ getProducts,setIsAuth}) {
       document.cookie = `angelaToken=${token}; expires=${new Date(expired)}`;
 
       axios.defaults.headers.common["Authorization"] = token;
-
-      //getProducts();
 
       setIsAuth(true);
       
