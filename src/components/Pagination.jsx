@@ -1,5 +1,8 @@
 //分頁功能
-function Pagination(){
+function Pagination({
+  pageInfo,
+  handlePageChange
+}){
   return(
     
     <div className="d-flex justify-content-center">
